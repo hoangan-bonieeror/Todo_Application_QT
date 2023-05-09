@@ -1,5 +1,5 @@
 # Todo_Application_QT is project that using QT to create a GUI for user
-I leverage the QNetworkAccessManager class given by QT Documentation to interact with the API of web server.
+I leverage a built-in class called QNetworkAccessManager to interact with the API of web server.
   - Folder Structrure :
     - todo : Client (QT/QML , C++)
     - web_server : Rest API server by Flask (Python)
