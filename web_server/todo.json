@@ -1,0 +1,26 @@
+[
+    {
+        "content": "A",
+        "status": false
+    },
+    {
+        "content": "B",
+        "status": true
+    },
+    {
+        "content": "C",
+        "status": false
+    },
+    {
+        "content": "D",
+        "status": true
+    },
+    {
+        "content": "E",
+        "status": true
+    },
+    {
+        "content": "F",
+        "status": false
+    }
+]
