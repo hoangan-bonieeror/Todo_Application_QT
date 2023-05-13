@@ -17,7 +17,9 @@ public:
     QNetworkAccessManager *manager;
 
     QByteArray GET(const QString hostName);
-    void POST(const QString hostName, QString content, bool status);
+    void POST(const QString hostName, int id, QString content, bool status);
+    void PUT(QString hostName, const int id, const QString content, bool status);
+    void DELETE(QString hostName, const int id);
 private:
     QNetworkRequest constructNetworkRequest(const QString hostName, QMap<QString, QString> headers);
     QNetworkAccessManager *networkManager;

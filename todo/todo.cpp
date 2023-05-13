@@ -6,7 +6,8 @@
 #include "networkcontroller.h"
 
 // Begin TodoItem Class
-TodoItem::TodoItem(QString const &name, bool const &isDone) {
+TodoItem::TodoItem(int const &id, QString const &name, bool const &isDone) {
+    pId = id;
     pContent = name;
     pStatus = isDone;
 }
@@ -30,6 +31,10 @@ bool TodoItem::status() const{
 void TodoItem::setStatus(bool const &value) {
     pStatus = value;
 }
+
+int TodoItem::id() const {
+    return pId;
+}
 // End TodoItem Class
 
 // Begin TodoModel Class
@@ -50,19 +55,26 @@ QVariant TodoModel::data(const QModelIndex &index, int role=Qt::DisplayRole) con
             break;
         case IsDoneRole:
             return item.status();
+        case IdRole:
+            return item.id();
         default:
             return QVariant();
     }
 }
 void TodoModel::addTodo(QString const &value) {
     beginInsertRows(QModelIndex(), rowCount() , rowCount());
-    TodoItem item(value, false);
-    controller->POST("http://localhost:3000", item.content(), item.status());
+    TodoItem lastTodo = listTodo.at(rowCount() - 1);
+    int newID = lastTodo.id() + 1;
+    TodoItem item(newID, value, false);
+    controller->POST("http://localhst:3000", item.id(), item.content(), item.status());
     listTodo.append(item);
+    listId.append(newID);
     endInsertRows();
 }
 
 void TodoModel::removeTodo(int index){
+    TodoItem foundTodo = listTodo.at(index);
+    controller->DELETE("http://localhost:3000", foundTodo.id());
     beginRemoveRows(QModelIndex(), index, index);
     listTodo.removeAt(index);
     endRemoveRows();
@@ -72,6 +84,7 @@ QHash<int, QByteArray> TodoModel::roleNames() const {
     QHash<int, QByteArray> roles;
     roles[ContentRoles] = "content";
     roles[IsDoneRole] = "status";
+    roles[IdRole] = "id";
     return roles;
 }
 
@@ -81,19 +94,25 @@ void TodoModel::getData() {
     QJsonObject rootObj = document.object();
     QJsonValue values = rootObj.value("data");
     if(values.isArray()) {
-            if(rowCount() > 0) {
-                beginRemoveRows(QModelIndex(), 0, rowCount() - 1);
-                listTodo.clear();
-                endRemoveRows();
-            }
+            beginRemoveRows(QModelIndex(), 0, rowCount()-1);
+            listTodo.clear();
+            listId.clear();
+            endRemoveRows();
             QJsonArray listData = values.toArray();
-            qDebug() << listData.count();
             for (const auto &item : listData) {
                 QJsonObject obj=item.toObject();
                 beginInsertRows(QModelIndex(), rowCount() , rowCount());
-                TodoItem todo(obj.value("content").toString(), obj.value("status").toBool());
+                TodoItem todo(obj.value("id").toInt(), obj.value("content").toString(), obj.value("status").toBool());
                 listTodo.append(todo);
+                listId.append(obj.value("id").toInt());
                 endInsertRows();
             }
     }
+}
+
+void TodoModel::checkTodo(int index, QString content, bool status) {
+    TodoItem foundTodo = listTodo.at(index);
+    controller->PUT("http://localhost:3000", foundTodo.id(), content, status);
+    foundTodo.setStatus(status);
+    return;
 }
