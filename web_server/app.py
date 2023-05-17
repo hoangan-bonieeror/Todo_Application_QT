@@ -43,13 +43,11 @@ def postTodo():
 def putTodo():
     log()
     id = request.args['id']
-    id = int(id)
+    index = int(id)
     body = request.get_json()
-    for item in todoList:
-        if item['id'] == id:
-            item['status'] = body['status']
-            if len(body['content']) != 0 or len(body['content']) == item['content']: 
-                item['content'] = body['content']
+    todoList[index]['status'] = body['status']
+    if len(body['content']) != 0 or len(body['content']) == todoList[index]['content']: 
+        todoList[index]['content'] = body['content']
     handle_file(FILE_MODE.WRITE)
     resp = Response(
         status=200
