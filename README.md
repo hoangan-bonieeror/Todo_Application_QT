@@ -3,6 +3,8 @@
   - Folder Structrure :
     - todo : Client (QT/QML , C++)
     - web_server : Rest API server by Flask (Python)
+## Demo
+![](demo.png)
   - Features :
     - Add new TODO
     - Get all TODOs
