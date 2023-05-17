@@ -9,6 +9,7 @@ NetworkController::NetworkController()
     headers["User-Agent"] = "Request Manager 1.0";
 }
 
+// ###### Define http methods ######
 // GET : get all todo
 QByteArray NetworkController::GET(QString const hostName)
 {
@@ -35,7 +36,7 @@ void NetworkController::POST(const QString hostName, int id, QString content, bo
     QJsonDocument docJson;
     docJson.setObject(bodyJson);
     QByteArray postData = docJson.toJson();
-
+    qDebug() << hostName;
     QNetworkReply *reply = this->networkManager->post(request, postData);
     connect(reply, SIGNAL(finished()), &loop, SLOT(quit()));
     loop.exec();
@@ -49,7 +50,6 @@ void NetworkController::PUT(QString hostName, const int id, const QString conten
     hostName.append("?id=");
     hostName.append(idAsString);
 
-    qDebug() << hostName;
     QNetworkRequest request = this->constructNetworkRequest(hostName, this->headers);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 
@@ -61,7 +61,6 @@ void NetworkController::PUT(QString hostName, const int id, const QString conten
     QJsonDocument doc;
     doc.setObject(bodyJson);
     QByteArray putData = doc.toJson();
-    qDebug() << putData;
     QNetworkReply *reply = this->networkManager->put(request, putData);
     connect(reply, SIGNAL(finished()), &loop, SLOT(quit()));
 
@@ -84,7 +83,9 @@ void NetworkController::DELETE(QString hostName, const int id) {
     loop.exec();
     return;
 }
+// ###### End define ######
 
+// ###### Network Utils ######
 QNetworkRequest NetworkController::constructNetworkRequest(QString const hostName, QMap<QString, QString> headers) {
     QNetworkRequest request;
     request.setUrl(QUrl(hostName));

@@ -10,15 +10,10 @@ Window {
     width: 640
     height: 480
     visible: true
-    title: qsTr("Hello World")
+    title: qsTr("Todo App")
 
     TodoModel {
         id : todoModel
-//        onErrorRequest : (error) => {
-//            console.log(error)
-//            notification.visible = true
-//            notificationText.text = err
-//        }
     }
 
     Component.onCompleted: () => {
@@ -88,9 +83,9 @@ Window {
                     }
 
                     delegate: Row {
-                        id : id
                         property int gap: 5
                         property int paddingDefault: 10
+                        property int indexItem: index
                         width : todoList.width - paddingDefault*2
                         spacing: gap
                         CheckBox {
@@ -99,7 +94,7 @@ Window {
                             anchors.verticalCenter: parent.verticalCenter
                             icon.color : "black"
                             onClicked : () => {
-                                todoModel.checkTodo(index, content, !status)
+                                todoModel.checkTodo(parent.indexItem, content, !status)
                             }
                         }
                         Rectangle {
@@ -125,6 +120,7 @@ Window {
                             anchors.verticalCenter: parent.verticalCenter
                             onClicked : () => {
                                         notification.visible = true
+                                        notification.indexItem = parent.indexItem
                             }
                         }
                     }
@@ -205,49 +201,58 @@ Window {
     Rectangle {
         id : notification
         width : 300
-        height : 250
+        height : 100
         anchors.centerIn: parent
-        radius : 20
-        border.color: "black"
-        border.width: 2
-        color: "black"
+        radius : 10
+//        border.color: "#F5F5DC"
+//        border.width: 1
+        color: "#F5F5DC"
+        property int indexItem: 0
         Column {
             width : parent.width
             height : parent.height
             Rectangle {
                 id : notificationContainer
                 width : parent.width
-                height: parent.height * 4/5
+                height: parent.height/2
+                color : "transparent"
                 Text {
                     id : notificationText
-                    color : "red"
+                    color : "black"
                     text : "Are you sure to delete ?"
+                    anchors.verticalCenter: parent.verticalCenter
+                    x : 20
                 }
             }
             Rectangle {
                 id : notificationFooter
-                height : parent.height * 1/5
+                height : parent.height/2
                 width : parent.width
+                color : "transparent"
                 Row {
                     width : parent.width
                     height : parent.height
                     layoutDirection: Qt.RightToLeft
                     spacing: 10
+                    rightPadding : 10
                     Button {
-                        width : 100
-                        height : 50
-                        text : "Cancel"
+                        width : 70
+                        height : 40
+                        text : "No"
+                        font.pixelSize: 14
                         onClicked : () => {
                             notification.visible = false
                         }
                     }
                     Button {
-                        width : 100
-                        height : 50
-                        text : "Ok"
+                        width : 70
+                        height : 40
+                        text : "Yes"
+                        font.pixelSize: 14
                         onClicked : () => {
-                            todoModel.addTodo(textInput.text)
+                            todoModel.removeTodo(notification.indexItem)
                             textInput.clear()
+                            notification.visible = false
                         }
                     }
                 }
