@@ -20,11 +20,12 @@ public:
     QNetworkReply* POST(const QString hostName, int id, QString content, bool status);
     QNetworkReply* PUT(QString hostName, const int id, const QString content, bool status);
     QNetworkReply* DELETE(QString hostName, const int id);
-    int getRequestTimeout();
+    int getNumRetry();
 private:
     QNetworkRequest constructNetworkRequest(const QString hostName, QMap<QString, QString> headers);
     QNetworkAccessManager *networkManager;
     QMap<QString, QString> headers;
+    int pNumRetry;
 };
 
 #endif // NETWORKCONTROLLER_H

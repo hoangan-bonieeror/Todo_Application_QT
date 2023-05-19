@@ -94,28 +94,21 @@ void TodoModel::addTodo(QString const &value) {
     TodoItem item(newID, value, false);
 
     // Edit
-    QTimer *timer = new QTimer(this);
-    int timeout = this->controller->getRequestTimeout();
-    timer->setSingleShot(true);
-
+    int numRetry = this->controller->getNumRetry();
     QString hostName = "http://localhost:3000";
     QNetworkReply * reply;
     reply = controller->POST(hostName, item.id(), item.content(), item.status());
     if(reply->error() != QNetworkReply::NoError) {
-            // Start timer for retry to call api
-            timer->start(timeout);
-            while(reply->error() != QNetworkReply::NoError) {
-                if(timer->isActive()) {
-                    // Retry
-                    reply = controller->POST(hostName, item.id(), item.content(), item.status());
-                    continue;
-                } else {
-                    // Request Timeout
-                    reply->abort();
-                    break;
-                }
+        int initRetryTime = 1;
+        do {
+            reply = controller->POST(hostName, item.id(), item.content(), item.status());
+            if(reply->error() != QNetworkReply::NoError) {
+                initRetryTime += 1;
+                continue;
+            } else {
+                break;
             }
-            timer->stop();
+        } while(initRetryTime <= numRetry);
     }
 
 
@@ -131,23 +124,21 @@ void TodoModel::addTodo(QString const &value) {
 // DELETE : delete todo
 void TodoModel::removeTodo(int index){
     this->setProcessing(true);
-    QTimer *timer = new QTimer(this);
-    timer->setSingleShot(true);
-    int timeout = this->controller->getRequestTimeout();
+    int numRetry = this->controller->getNumRetry();
     TodoItem foundTodo = listTodo.at(index);
     const QString hostName = "http://localhost:3000";
     QNetworkReply *reply = controller->DELETE(hostName, foundTodo.id());
     if(reply->error() != QNetworkReply::NoError) {
-            timer->start(timeout);
-            while(reply->error() != QNetworkReply::NoError) {
-                if(timer->isActive()) {
-                    reply = controller->DELETE(hostName, foundTodo.id());
-                    continue;
-                } else {
-                    reply->abort();
-                    break;
-                }
+        int initRetryTime = 1;
+        do {
+            reply = controller->DELETE(hostName, foundTodo.id());
+            if(reply->error() != QNetworkReply::NoError) {
+                initRetryTime += 1;
+                continue;
+            } else {
+                break;
             }
+        } while(initRetryTime <= numRetry);
     }
 
     if(reply->error() == QNetworkReply::NoError) {
@@ -161,49 +152,46 @@ void TodoModel::removeTodo(int index){
 // GET : get all todos
 void TodoModel::getData() {
     this->setProcessing(true);
-    QTimer *timer = new QTimer(this);
-    int timeout = this->controller->getRequestTimeout();
-    timer->setSingleShot(true);
+    int numRetry = this->controller->getNumRetry();
     QString hostName = "http://localhost:3000";
     QNetworkReply * reply;
     reply = controller->GET(hostName);
     if(reply->error() != QNetworkReply::NoError) {
-            timer->start(timeout);
-            while(reply->error() != QNetworkReply::NoError) {
-                if(timer->isActive()) {
-                    // Retry
-                    qDebug() << "Retry" << timer->remainingTime();
-                    reply = controller->GET(hostName);
-                    continue;
-                } else {
-                    // Request Timeout
-                    reply->abort();
-                    break;
-                }
+        int initRetryTime = 1;
+        do {
+//            qDebug() << "Retry"<< initRetryTime;
+            reply = controller->GET(hostName);
+            if(reply->error() != QNetworkReply::NoError) {
+//                qDebug() << reply->error();
+                initRetryTime += 1;
+                continue;
+            } else {
+                break;
             }
-            timer->stop();
+        }
+        while(initRetryTime <= numRetry);
     }
 
     if(reply->error() == QNetworkReply::NoError) {
-            QByteArray data = reply->readAll();
-            QJsonDocument document = QJsonDocument::fromJson(data);
-            QJsonObject rootObj = document.object();
-            QJsonValue values = rootObj.value("data");
-            if(values.isArray()) {
-                beginRemoveRows(QModelIndex(), 0, rowCount()-1);
-                listTodo.clear();
-                listId.clear();
-                endRemoveRows();
-                QJsonArray listData = values.toArray();
-                for (const auto &item : listData) {
-                    QJsonObject obj=item.toObject();
-                    beginInsertRows(QModelIndex(), rowCount() , rowCount());
-                    TodoItem todo(obj.value("id").toInt(), obj.value("content").toString(), obj.value("status").toBool());
-                    listTodo.append(todo);
-                    listId.append(obj.value("id").toInt());
-                    endInsertRows();
-                }
+        QByteArray data = reply->readAll();
+        QJsonDocument document = QJsonDocument::fromJson(data);
+        QJsonObject rootObj = document.object();
+        QJsonValue values = rootObj.value("data");
+        if(values.isArray()) {
+            beginRemoveRows(QModelIndex(), 0, rowCount()-1);
+            listTodo.clear();
+            listId.clear();
+            endRemoveRows();
+            QJsonArray listData = values.toArray();
+            for (const auto &item : listData) {
+                QJsonObject obj=item.toObject();
+                beginInsertRows(QModelIndex(), rowCount() , rowCount());
+                TodoItem todo(obj.value("id").toInt(), obj.value("content").toString(), obj.value("status").toBool());
+                listTodo.append(todo);
+                listId.append(obj.value("id").toInt());
+                endInsertRows();
             }
+        }
     }
 
     this->setProcessing(false);
@@ -211,28 +199,27 @@ void TodoModel::getData() {
  // PUT : toggle todo
 void TodoModel::checkTodo(int index, QString content, bool status) {
     this->setProcessing(true);
-    QTimer *timer = new QTimer(this);
-    timer->setSingleShot(true);
-    int timeout = this->controller->getRequestTimeout();
+    int numRetry = this->controller->getNumRetry();
     TodoItem foundTodo = listTodo.at(index);
     const QString hostName = "http://localhost:3000";
     // Call API to modify data at server
     QNetworkReply *reply = controller->PUT(hostName, index, content, status);
     if(reply->error() != QNetworkReply::NoError) {
-            timer->start(timeout);
-            while(reply->error() != QNetworkReply::NoError) {
-                if(timer->isActive()) {
-                    reply = controller->PUT(hostName, foundTodo.id(), content, status);
-                    continue;
-                } else {
-                    reply->abort();
-                    break;
-                }
+        int initRetryTime = 1;
+        do {
+            reply = controller->PUT(hostName, index, content, status);
+            if(reply->error() != QNetworkReply::NoError) {
+                initRetryTime += 1;
+                continue;
+            } else {
+                break;
             }
+        } while(initRetryTime <= numRetry);
     }
     if(reply->error() == QNetworkReply::NoError) {
         // Modify data in the model at a specified index in the list todo
         setData(createIndex(index, IsDoneRole), status, IsDoneRole);
+        foundTodo.setStatus(status);
     }
 
     this->setProcessing(false);

@@ -7,7 +7,7 @@
 const qint16 PORT = 3000;
 const QString HOST = "http://localhost";
 const int REQUEST_TIMEOUT = 3000;
-
+const int NUM_RETRY = 3;
 NetworkController::NetworkController()
 {
     this->networkManager = new QNetworkAccessManager(this);
@@ -15,6 +15,7 @@ NetworkController::NetworkController()
     this->networkManager->connectToHost(HOST, PORT);
     // Specify request timeout
     this->networkManager->setTransferTimeout(REQUEST_TIMEOUT);
+    this->pNumRetry = NUM_RETRY;
 }
 
 // ###### Define http methods ######
@@ -106,7 +107,7 @@ QNetworkRequest NetworkController::constructNetworkRequest(QString const hostNam
 
     return request;
 }
-int NetworkController::getRequestTimeout() {
-    return this->networkManager->transferTimeout();
+int NetworkController::getNumRetry() {
+    return this->pNumRetry;
 }
 
