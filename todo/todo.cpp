@@ -32,7 +32,10 @@ int TodoItem::id() const {
 // ###### End TodoItem Class ######
 
 // ###### Begin TodoModel Class ######
-//TodoModel::TodoModel(QObject *parent) : QAbstractListModel(parent){};
+TodoModel::TodoModel(QObject *parent) : QAbstractListModel(parent){
+    this->controller = new NetworkController();
+    this->setProperty("isLoading", false);
+};
 // ## Override method
 int TodoModel::rowCount(const QModelIndex &parent = QModelIndex()) const{
     return listTodo.count();
@@ -80,68 +83,167 @@ bool TodoModel::setData(const QModelIndex &index, const QVariant &value, int rol
 // ## Invokable methods (via API)
 // POST : add new todo
 void TodoModel::addTodo(QString const &value) {
-    // Insert data to the model
-    beginInsertRows(QModelIndex(), rowCount() , rowCount());
+    this->setProcessing(true);
     int newID;
     if(rowCount() == 0) {
-        newID = 0;
+            newID = 0;
     } else {
-        TodoItem lastTodo = listTodo.at(rowCount() - 1);
-        newID = lastTodo.id() + 1;
+            TodoItem lastTodo = listTodo.at(rowCount() - 1);
+            newID = lastTodo.id() + 1;
     }
     TodoItem item(newID, value, false);
-    // Call API to add new record
-    controller->POST("http://localhost:3000", item.id(), item.content(), item.status());
-    // Append to todo list
-    listTodo.append(item);
-    listId.append(newID);
-    endInsertRows();
+
+    // Edit
+    QTimer *timer = new QTimer(this);
+    int timeout = this->controller->getRequestTimeout();
+    timer->setSingleShot(true);
+
+    QString hostName = "http://localhost:3000";
+    QNetworkReply * reply;
+    reply = controller->POST(hostName, item.id(), item.content(), item.status());
+    if(reply->error() != QNetworkReply::NoError) {
+            // Start timer for retry to call api
+            timer->start(timeout);
+            while(reply->error() != QNetworkReply::NoError) {
+                if(timer->isActive()) {
+                    // Retry
+                    reply = controller->POST(hostName, item.id(), item.content(), item.status());
+                    continue;
+                } else {
+                    // Request Timeout
+                    reply->abort();
+                    break;
+                }
+            }
+            timer->stop();
+    }
+
+
+    if(reply->error() == QNetworkReply::NoError) {
+            beginInsertRows(QModelIndex(), rowCount() , rowCount());
+            listTodo.append(item);
+            listId.append(newID);
+            endInsertRows();
+    }
+    this->setProcessing(false);
 }
 
 // DELETE : delete todo
 void TodoModel::removeTodo(int index){
+    this->setProcessing(true);
+    QTimer *timer = new QTimer(this);
+    timer->setSingleShot(true);
+    int timeout = this->controller->getRequestTimeout();
     TodoItem foundTodo = listTodo.at(index);
-    // Call API to remove record by id todo
-    controller->DELETE("http://localhost:3000", foundTodo.id());
-    // Remove data associated with specified index
-    beginRemoveRows(QModelIndex(), index, index);
-    // Remove todo by index from todo list
-    listTodo.removeAt(index);
-    endRemoveRows();
+    const QString hostName = "http://localhost:3000";
+    QNetworkReply *reply = controller->DELETE(hostName, foundTodo.id());
+    if(reply->error() != QNetworkReply::NoError) {
+            timer->start(timeout);
+            while(reply->error() != QNetworkReply::NoError) {
+                if(timer->isActive()) {
+                    reply = controller->DELETE(hostName, foundTodo.id());
+                    continue;
+                } else {
+                    reply->abort();
+                    break;
+                }
+            }
+    }
+
+    if(reply->error() == QNetworkReply::NoError) {
+            beginRemoveRows(QModelIndex(), index, index);
+            listTodo.removeAt(index);
+            endRemoveRows();
+    }
+    this->setProcessing(false);
 }
 
 // GET : get all todos
 void TodoModel::getData() {
-    QByteArray data = controller->GET("http://localhost:3000");
-    QJsonDocument document = QJsonDocument::fromJson(data);
-    QJsonObject rootObj = document.object();
-    QJsonValue values = rootObj.value("data");
-    if(values.isArray()) {
-            // Clear all rows in case of refreshing data
-            beginRemoveRows(QModelIndex(), 0, rowCount()-1);
-            listTodo.clear();
-            listId.clear();
-            endRemoveRows();
-            // Start insert every single data from API to the model
-            QJsonArray listData = values.toArray();
-            for (const auto &item : listData) {
-                QJsonObject obj=item.toObject();
-                beginInsertRows(QModelIndex(), rowCount() , rowCount());
-                TodoItem todo(obj.value("id").toInt(), obj.value("content").toString(), obj.value("status").toBool());
-                // Append data to listTodo
-                listTodo.append(todo);
-                listId.append(obj.value("id").toInt());
-                endInsertRows();
+    this->setProcessing(true);
+    QTimer *timer = new QTimer(this);
+    int timeout = this->controller->getRequestTimeout();
+    timer->setSingleShot(true);
+    QString hostName = "http://localhost:3000";
+    QNetworkReply * reply;
+    reply = controller->GET(hostName);
+    if(reply->error() != QNetworkReply::NoError) {
+            timer->start(timeout);
+            while(reply->error() != QNetworkReply::NoError) {
+                if(timer->isActive()) {
+                    // Retry
+                    qDebug() << "Retry" << timer->remainingTime();
+                    reply = controller->GET(hostName);
+                    continue;
+                } else {
+                    // Request Timeout
+                    reply->abort();
+                    break;
+                }
+            }
+            timer->stop();
+    }
+
+    if(reply->error() == QNetworkReply::NoError) {
+            QByteArray data = reply->readAll();
+            QJsonDocument document = QJsonDocument::fromJson(data);
+            QJsonObject rootObj = document.object();
+            QJsonValue values = rootObj.value("data");
+            if(values.isArray()) {
+                beginRemoveRows(QModelIndex(), 0, rowCount()-1);
+                listTodo.clear();
+                listId.clear();
+                endRemoveRows();
+                QJsonArray listData = values.toArray();
+                for (const auto &item : listData) {
+                    QJsonObject obj=item.toObject();
+                    beginInsertRows(QModelIndex(), rowCount() , rowCount());
+                    TodoItem todo(obj.value("id").toInt(), obj.value("content").toString(), obj.value("status").toBool());
+                    listTodo.append(todo);
+                    listId.append(obj.value("id").toInt());
+                    endInsertRows();
+                }
             }
     }
+
+    this->setProcessing(false);
 }
  // PUT : toggle todo
 void TodoModel::checkTodo(int index, QString content, bool status) {
+    this->setProcessing(true);
+    QTimer *timer = new QTimer(this);
+    timer->setSingleShot(true);
+    int timeout = this->controller->getRequestTimeout();
+    TodoItem foundTodo = listTodo.at(index);
+    const QString hostName = "http://localhost:3000";
     // Call API to modify data at server
-    controller->PUT("http://localhost:3000", index, content, status);
-    // Modify data in the model at a specified index in the list todo
-    setData(createIndex(index, IsDoneRole), status, IsDoneRole);
+    QNetworkReply *reply = controller->PUT(hostName, index, content, status);
+    if(reply->error() != QNetworkReply::NoError) {
+            timer->start(timeout);
+            while(reply->error() != QNetworkReply::NoError) {
+                if(timer->isActive()) {
+                    reply = controller->PUT(hostName, foundTodo.id(), content, status);
+                    continue;
+                } else {
+                    reply->abort();
+                    break;
+                }
+            }
+    }
+    if(reply->error() == QNetworkReply::NoError) {
+        // Modify data in the model at a specified index in the list todo
+        setData(createIndex(index, IsDoneRole), status, IsDoneRole);
+    }
+
+    this->setProcessing(false);
     return;
 }
-
+bool TodoModel::isProcessing() const {
+    return this->pIsProcessing;
+}
+void TodoModel::setProcessing(bool value) {
+    this->pIsProcessing = value;
+    emit isProcessingChanged();
+    return;
+}
 // ###### End TodoModel class ######

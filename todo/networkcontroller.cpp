@@ -2,29 +2,35 @@
 #include "networkcontroller.h"
 #include <QNetworkAccessManager>
 #include <QHttpPart>
+#include <QNetworkReply>
+
+const qint16 PORT = 3000;
+const QString HOST = "http://localhost";
+const int REQUEST_TIMEOUT = 3000;
 
 NetworkController::NetworkController()
 {
     this->networkManager = new QNetworkAccessManager(this);
     headers["User-Agent"] = "Request Manager 1.0";
+    this->networkManager->connectToHost(HOST, PORT);
+    // Specify request timeout
+    this->networkManager->setTransferTimeout(REQUEST_TIMEOUT);
 }
 
 // ###### Define http methods ######
 // GET : get all todo
-QByteArray NetworkController::GET(QString const hostName)
+QNetworkReply* NetworkController::GET(QString const hostName)
 {
     QEventLoop loop;
     QNetworkRequest request = this->constructNetworkRequest(hostName, this->headers);
-
     QNetworkReply *reply = this->networkManager->get(request);
     connect(reply, SIGNAL(finished()), &loop, SLOT(quit()));
-
     loop.exec();
-    return reply->readAll();
+    return reply;
 }
 
 // POST : create new todo
-void NetworkController::POST(const QString hostName, int id, QString content, bool status) {
+QNetworkReply* NetworkController::POST(const QString hostName, int id, QString content, bool status) {
     QEventLoop loop;
     QNetworkRequest request = this->constructNetworkRequest(hostName, this->headers);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
@@ -36,14 +42,13 @@ void NetworkController::POST(const QString hostName, int id, QString content, bo
     QJsonDocument docJson;
     docJson.setObject(bodyJson);
     QByteArray postData = docJson.toJson();
-    qDebug() << hostName;
     QNetworkReply *reply = this->networkManager->post(request, postData);
     connect(reply, SIGNAL(finished()), &loop, SLOT(quit()));
     loop.exec();
-    return;
+    return reply;
 }
 // PUT : update todo
-void NetworkController::PUT(QString hostName, const int id, const QString content, bool status) {
+QNetworkReply* NetworkController::PUT(QString hostName, const int id, const QString content, bool status) {
     QEventLoop loop;
     QString idAsString;
     idAsString.setNum(id);
@@ -65,10 +70,10 @@ void NetworkController::PUT(QString hostName, const int id, const QString conten
     connect(reply, SIGNAL(finished()), &loop, SLOT(quit()));
 
     loop.exec();
-    return;
+    return reply;
 }
 // DELETE : delete toto
-void NetworkController::DELETE(QString hostName, const int id) {
+QNetworkReply* NetworkController::DELETE(QString hostName, const int id) {
     QEventLoop loop;
     QString idAsString;
     idAsString.setNum(id);
@@ -81,7 +86,7 @@ void NetworkController::DELETE(QString hostName, const int id) {
     connect(reply, SIGNAL(finished()), &loop, SLOT(quit()));
 
     loop.exec();
-    return;
+    return reply;
 }
 // ###### End define ######
 
@@ -101,3 +106,7 @@ QNetworkRequest NetworkController::constructNetworkRequest(QString const hostNam
 
     return request;
 }
+int NetworkController::getRequestTimeout() {
+    return this->networkManager->transferTimeout();
+}
+

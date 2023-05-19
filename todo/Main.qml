@@ -10,17 +10,17 @@ Window {
     width: 640
     height: 480
     visible: true
-    title: qsTr("Todo App")
+    title: qsTr("Todo Application")
 
     TodoModel {
         id : todoModel
     }
-
     Component.onCompleted: () => {
         todoModel.getData()
     }
 
     Rectangle {
+        opacity: todoModel.isProcessing ? 0.8 : 1
         id : header
         width: parent.width
         height : parent.height * 1/10
@@ -52,6 +52,7 @@ Window {
     }
 
     Item {
+        opacity: todoModel.isProcessing ? 0.8 : 1
         width: parent.width
         height: parent.height * 9/10
         anchors.top: header.bottom
@@ -85,7 +86,7 @@ Window {
                     delegate: Row {
                         property int gap: 5
                         property int paddingDefault: 10
-                        property int indexItem: index
+                        property int currentIndex: index
                         width : todoList.width - paddingDefault*2
                         spacing: gap
                         CheckBox {
@@ -94,7 +95,7 @@ Window {
                             anchors.verticalCenter: parent.verticalCenter
                             icon.color : "black"
                             onClicked : () => {
-                                todoModel.checkTodo(parent.indexItem, content, !status)
+                                todoModel.checkTodo(parent.currentIndex, content, !status)
                             }
                         }
                         Rectangle {
@@ -119,8 +120,8 @@ Window {
                             height : parent.height
                             anchors.verticalCenter: parent.verticalCenter
                             onClicked : () => {
-                                        notification.visible = true
-                                        notification.indexItem = parent.indexItem
+                                        dialog.visible = true
+                                        dialog.index = parent.currentIndex
                             }
                         }
                     }
@@ -199,7 +200,7 @@ Window {
         }
     }
     Rectangle {
-        id : notification
+        id : dialog
         width : 300
         height : 100
         anchors.centerIn: parent
@@ -207,17 +208,17 @@ Window {
 //        border.color: "#F5F5DC"
 //        border.width: 1
         color: "#F5F5DC"
-        property int indexItem: 0
+        property int index: 0
         Column {
             width : parent.width
             height : parent.height
             Rectangle {
-                id : notificationContainer
+                id : dialogContainer
                 width : parent.width
                 height: parent.height/2
                 color : "transparent"
                 Text {
-                    id : notificationText
+                    id : dialogText
                     color : "black"
                     text : "Are you sure to delete ?"
                     anchors.verticalCenter: parent.verticalCenter
@@ -225,7 +226,7 @@ Window {
                 }
             }
             Rectangle {
-                id : notificationFooter
+                id : dialogFooter
                 height : parent.height/2
                 width : parent.width
                 color : "transparent"
@@ -241,7 +242,7 @@ Window {
                         text : "No"
                         font.pixelSize: 14
                         onClicked : () => {
-                            notification.visible = false
+                            dialog.visible = false
                         }
                     }
                     Button {
@@ -250,9 +251,9 @@ Window {
                         text : "Yes"
                         font.pixelSize: 14
                         onClicked : () => {
-                            todoModel.removeTodo(notification.indexItem)
+                            todoModel.removeTodo(dialog.index)
                             textInput.clear()
-                            notification.visible = false
+                            dialog.visible = false
                         }
                     }
                 }
@@ -262,5 +263,118 @@ Window {
 
 
     }
+    BusyIndicator {
+        running: todoModel.isProcessing
+        anchors.centerIn: parent
+        id: control
 
+        contentItem: Item {
+            implicitWidth: 64
+            implicitHeight: 64
+
+            Item {
+                id: item
+                x: parent.width / 2 - 32
+                y: parent.height / 2 - 32
+                width: 64
+                height: 64
+                opacity: control.running ? 1 : 0
+
+                Behavior on opacity {
+                    OpacityAnimator {
+                        duration: 250
+                    }
+                }
+
+                RotationAnimator {
+                    target: item
+                    running: control.visible && control.running
+                    from: 0
+                    to: 360
+                    loops: Animation.Infinite
+                    duration: 1250
+                }
+
+                Repeater {
+                    id: repeater
+                    model: 6
+
+                    Rectangle {
+                        id: delegate
+                        x: item.width / 2 - width / 2
+                        y: item.height / 2 - height / 2
+                        implicitWidth: 10
+                        implicitHeight: 10
+                        radius: 5
+                        color: "black"
+
+                        required property int index
+
+                        transform: [
+                            Translate {
+                                y: -Math.min(item.width, item.height) * 0.5 + 5
+                            },
+                            Rotation {
+                                angle: delegate.index / repeater.count * 360
+                                origin.x: 5
+                                origin.y: 5
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    }
+    Rectangle {
+        id : toast
+        width : 200
+        height : 70
+        x : parent.width - toast.width - 20
+        y : parent.height - toast.height - 20
+        radius : 5
+        visible: true
+        border {
+            color: "green"
+            width : 1
+        }
+
+        Row {
+            width: parent.width
+            height : parent.height
+            spacing: 20
+            Column {
+                width : parent.width * 2/3
+                anchors.verticalCenter: parent.verticalCenter
+                leftPadding : 10
+                Label {
+                    text : "Notification"
+                    font.pixelSize: 18
+                    font.bold: true
+                }
+                Text {
+                    text : "Message"
+                    color : "#85929E"
+                }
+            }
+            Column {
+                width : parent.width * 1/3
+                anchors.verticalCenter: parent.verticalCenter
+                Button {
+                    width : 50
+                    height : 45
+                    text : "\u03A7"
+                    background: Rectangle {
+                        color : "transparent"
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked : () => {
+                            toast.visible = false
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

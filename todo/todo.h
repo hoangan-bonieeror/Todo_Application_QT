@@ -26,9 +26,8 @@ class TodoModel : public QAbstractListModel
 {
     Q_OBJECT
 public:
-    TodoModel(QObject *parent = nullptr) : QAbstractListModel(parent) {
-        this->controller = new NetworkController();
-    };
+    Q_PROPERTY(bool isProcessing READ isProcessing WRITE setProcessing NOTIFY isProcessingChanged);
+    explicit TodoModel(QObject *parent = nullptr);
     enum TodoItemRoles {
         ContentRoles = Qt::UserRole+1,
         IsDoneRole,
@@ -36,18 +35,22 @@ public:
     };
     int rowCount(const QModelIndex &parent) const override;
     QVariant data(const QModelIndex &index, int role) const override;
-    bool setData(const QModelIndex &index, const QVariant &value, int role);
+    Q_INVOKABLE void setProcessing(bool value);
+    Q_INVOKABLE bool isProcessing() const;
     Q_INVOKABLE void addTodo(const QString &value);
     Q_INVOKABLE void removeTodo(int index);
     Q_INVOKABLE void getData();
     Q_INVOKABLE void checkTodo(int index, QString content, bool status);
-signals :
+signals:
+    void isProcessingChanged();
 protected :
     QHash<int, QByteArray> roleNames() const override;
 private :
+    bool setData(const QModelIndex &index, const QVariant &value, int role);
     QList<TodoItem> listTodo;
     NetworkController *controller;
     QList<int> listId;
+    bool pIsProcessing;
 };
 
 #endif // TODO_H
