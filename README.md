@@ -1,4 +1,4 @@
-# Todo_Application_QT is project that using QT to create a GUI application. 
+# Todo_Application_QT is a project that using QT to create a GUI application. 
   - I leverage a built-in class named QNetworkAccessManager to interact with the API of the web server.
   - Folder Structrure :
     - todo : Client (QT/QML , C++)
