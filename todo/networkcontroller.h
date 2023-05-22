@@ -25,7 +25,7 @@ private:
     QNetworkRequest constructNetworkRequest(const QString hostName, QMap<QString, QString> headers);
     QNetworkAccessManager *networkManager;
     QMap<QString, QString> headers;
-    int pNumRetry;
+    int mNumRetry;
 };
 
 #endif // NETWORKCONTROLLER_H

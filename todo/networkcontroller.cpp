@@ -2,23 +2,20 @@
 #include "networkcontroller.h"
 #include <QNetworkAccessManager>
 #include <QHttpPart>
-#include <QNetworkReply>
 
 const qint16 PORT = 3000;
 const QString HOST = "http://localhost";
-const int REQUEST_TIMEOUT = 3000;
+const int REQUEST_TIMEOUT = 5000;
 const int NUM_RETRY = 3;
 NetworkController::NetworkController()
 {
     this->networkManager = new QNetworkAccessManager(this);
     headers["User-Agent"] = "Request Manager 1.0";
     this->networkManager->connectToHost(HOST, PORT);
-    // Specify request timeout
     this->networkManager->setTransferTimeout(REQUEST_TIMEOUT);
-    this->pNumRetry = NUM_RETRY;
+    this->mNumRetry = NUM_RETRY;
 }
 
-// ###### Define http methods ######
 // GET : get all todo
 QNetworkReply* NetworkController::GET(QString const hostName)
 {
@@ -67,9 +64,9 @@ QNetworkReply* NetworkController::PUT(QString hostName, const int id, const QStr
     QJsonDocument doc;
     doc.setObject(bodyJson);
     QByteArray putData = doc.toJson();
+    qDebug() << putData;
     QNetworkReply *reply = this->networkManager->put(request, putData);
     connect(reply, SIGNAL(finished()), &loop, SLOT(quit()));
-
     loop.exec();
     return reply;
 }
@@ -85,13 +82,10 @@ QNetworkReply* NetworkController::DELETE(QString hostName, const int id) {
 
     QNetworkReply *reply = this->networkManager->deleteResource(request);
     connect(reply, SIGNAL(finished()), &loop, SLOT(quit()));
-
     loop.exec();
     return reply;
 }
-// ###### End define ######
 
-// ###### Network Utils ######
 QNetworkRequest NetworkController::constructNetworkRequest(QString const hostName, QMap<QString, QString> headers) {
     QNetworkRequest request;
     request.setUrl(QUrl(hostName));
@@ -108,6 +102,5 @@ QNetworkRequest NetworkController::constructNetworkRequest(QString const hostNam
     return request;
 }
 int NetworkController::getNumRetry() {
-    return this->pNumRetry;
+    return mNumRetry;
 }
-

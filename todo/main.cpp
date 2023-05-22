@@ -3,6 +3,7 @@
 #include <QQmlApplicationEngine>
 #include <todo.h>
 #include <networkcontroller.h>
+#include <QQuickView>
 
 
 int main(int argc, char *argv[])

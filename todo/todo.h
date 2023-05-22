@@ -51,6 +51,7 @@ private :
     NetworkController *controller;
     QList<int> listId;
     bool pIsProcessing;
+
 };
 
 #endif // TODO_H
